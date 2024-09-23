@@ -3,8 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Player : MonoBehaviour
-{
+public class Player : MonoBehaviour {
 	public List<Transform> asteroidTransforms;
 	public Transform enemyTransform;
 	public GameObject bombPrefab;
@@ -13,41 +12,49 @@ public class Player : MonoBehaviour
 	public float moveSpeed, accelerationTime, decelerationTime;
 	Vector3 moveVelocity;
 
-	private void Start()
-	{
+	float timer = 0;
+
+	private void Start() {
 		//Application.targetFrameRate = 20;
 	}
 
-	void Update()
-	{
+	void Update() {
+		timer += Time.deltaTime;
 		PlayerMovement(); // Invoke every frame
 	}
 
-	float Clamp(float change)
-	{
+	float Clamp(float change) {
 		return Mathf.Clamp(change, -1, 1);
 	}
 
-	float Decelerate(float currentValue)
-	{
+	float Decelerate(float currentValue) {
 		// If the value is below 0, just be instant. Otherwise divide the distance by the time (1 unit, 3000 milliseconds for example)
 		float decelerationSpeed = (decelerationTime > 0) ? (1.0f / decelerationTime) : 1.0f;
 
 		// Add up to 0 if negative, subtract down to 0 if positive
-		return (currentValue < 0) ? 
-			Mathf.Clamp(currentValue + decelerationSpeed * Time.deltaTime, -1, 0) 
-			: 
+		return (currentValue < 0) ?
+			Mathf.Clamp(currentValue + decelerationSpeed * Time.deltaTime, -1, 0)
+			:
 			Mathf.Clamp(currentValue - decelerationSpeed * Time.deltaTime, 0, 1);
 	}
 
-	public void PlayerMovement()
-	{
+	float accelerationStart = 0;
+	float accelerationTimeElapsed = 0;
+
+	public void PlayerMovement() {
 		// Re-calculate the speed in case the accelerationTime value changes during runtime
-		float accelerationSpeed = (accelerationTime > 0) ? (1.0f / accelerationTime) : 1.0f; // Make sure the value is above 0
+		float accelerationSpeed = (accelerationTime > 0) ? (1.0f / accelerationTime) : 1.0f; // Make sure the value is above 
 
 		// Up and down arrows cannot be held at the same time; prioritize one or the other
-		if (Input.GetKey(KeyCode.UpArrow)) moveVelocity.y = Clamp(moveVelocity.y + accelerationSpeed * Time.deltaTime); // (?, 1)
-		else if (Input.GetKey(KeyCode.DownArrow)) moveVelocity.y = Clamp(moveVelocity.y - accelerationSpeed * Time.deltaTime); // (?, -1)
+		if (Input.GetKey(KeyCode.UpArrow)) {
+			if (moveVelocity.y == 0) accelerationStart = timer;
+			else if (accelerationTimeElapsed == 0 && moveVelocity.y >= 1) {
+				accelerationTimeElapsed = timer - accelerationStart;
+				print("Acceleration time: " + accelerationTimeElapsed);
+			}
+
+			moveVelocity.y = Clamp(moveVelocity.y + accelerationSpeed * Time.deltaTime); // (?, 1)
+		} else if (Input.GetKey(KeyCode.DownArrow)) moveVelocity.y = Clamp(moveVelocity.y - accelerationSpeed * Time.deltaTime); // (?, -1)
 		else moveVelocity.y = Decelerate(moveVelocity.y); // (?, 0) (neither being held down)
 
 		if (Input.GetKey(KeyCode.LeftArrow)) moveVelocity.x = Clamp(moveVelocity.x - accelerationSpeed * Time.deltaTime); // (-1, ?)
