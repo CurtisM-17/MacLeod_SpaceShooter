@@ -8,19 +8,23 @@ public class Player : MonoBehaviour {
 	public Transform enemyTransform;
 	public GameObject bombPrefab;
 	public Transform bombsTransform;
+	public GameObject powerupPrefab;
 
 	public float moveSpeed, accelerationTime, decelerationTime;
 	Vector3 moveVelocity;
 
 	float timer = 0;
 
-	private void Start() {
-		//Application.targetFrameRate = 20;
-	}
+	public int circlePoints = 8;
+	public float circleRadius = 2f;
+	public int powerupsToSpawn = 5;
 
 	void Update() {
 		timer += Time.deltaTime;
 		PlayerMovement(); // Invoke every frame
+
+		EnemyRadar(circleRadius, circlePoints);
+		if (Input.GetKeyDown(KeyCode.P)) SpawnPowerups(circleRadius, powerupsToSpawn);
 	}
 
 	float Clamp(float change) {
@@ -71,4 +75,40 @@ public class Player : MonoBehaviour {
 		// Move
 		transform.position += moveVector; // Add the new filtered move vector to the position
 	}
+
+	//////////////////////////////////////
+	/////////////// Week 4 ///////////////
+	//////////////////////////////////////
+	Vector3 GetPoint(int index, float spaceBetweenPoints, float radius) {
+		float thisAngle = (spaceBetweenPoints * index) * Mathf.Deg2Rad; // Multiply how much space between each point by the current index and convert to radians
+		Vector3 thisPoint = transform.position + (new Vector3(Mathf.Cos(thisAngle), Mathf.Sin(thisAngle)) * radius); // P = ( cos(Θ), sin(Θ) ) * radius
+		// May as well add to player's position since all uses of this method need to do it anyways
+
+		return thisPoint; // Coordinate of the point on the circle relative to the circle's origin
+	}
+	
+	public void EnemyRadar(float radius, int circlePoints) {
+        float spaceBetweenPoints = 360.0f / circlePoints; // Divide 360 degrees into the number of points
+
+		Color circleColor = ((enemyTransform.position - transform.position).magnitude <= radius) ? Color.red : Color.green; // Red if within radius, green if outside
+		
+		for (int point = 0; point < circlePoints; point++){ // Each circle point
+			Vector3 thisPoint = GetPoint(point, spaceBetweenPoints, radius); // This point on the circle
+			Vector3 nextPoint = GetPoint((point + 1) % (circlePoints + 1), spaceBetweenPoints, radius); // The adjacent/next point (loop back at 0 if last element)
+
+			// Start line at thisPoint and draw until nextPoint (around the player's position of course)
+			Debug.DrawLine(thisPoint, nextPoint, circleColor);
+		}
+    }
+
+	public void SpawnPowerups(float radius, int numOfPowerups) {
+		float spaceBetweenPowerups = 360.0f / numOfPowerups; // Divide 360 degrees into the number of powerups
+
+        for (int index = 0; index < numOfPowerups; index++){ // For each powerup
+			// Create the powerup at the appropriate point
+			GameObject powerup = Instantiate(powerupPrefab, GetPoint(index, spaceBetweenPowerups, radius), powerupPrefab.transform.rotation);
+			Destroy(powerup, 5); // Destruct after 5 seconds to avoid cluttering the scene
+        }
+    }
 }
+
