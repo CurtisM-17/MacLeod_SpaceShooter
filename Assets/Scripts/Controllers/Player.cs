@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Player : MonoBehaviour {
 	public List<Transform> asteroidTransforms;
@@ -10,18 +11,24 @@ public class Player : MonoBehaviour {
 	public Transform bombsTransform;
 	public GameObject powerupPrefab;
 
+	// Controls
+	readonly KeyCode UP = KeyCode.W;
+	readonly KeyCode DOWN = KeyCode.S;
+	readonly KeyCode LEFT = KeyCode.A;
+	readonly KeyCode RIGHT = KeyCode.D;
+
+	// Motion
 	public float moveSpeed, accelerationTime, decelerationTime;
 	Vector3 moveVelocity;
-
-	float timer = 0;
 
 	public int circlePoints = 8;
 	public float circleRadius = 2f;
 	public int powerupsToSpawn = 5;
 
 	void Update() {
-		timer += Time.deltaTime;
 		PlayerMovement(); // Invoke every frame
+
+		if (Input.GetMouseButton(0)) Shoot();
 
 		EnemyRadar(circleRadius, circlePoints);
 		if (Input.GetKeyDown(KeyCode.P)) SpawnPowerups(circleRadius, powerupsToSpawn);
@@ -42,38 +49,50 @@ public class Player : MonoBehaviour {
 			Mathf.Clamp(currentValue - decelerationSpeed * Time.deltaTime, 0, 1);
 	}
 
-	float accelerationStart = 0;
-	float accelerationTimeElapsed = 0;
+	Vector3 intendedMoveDir = Vector3.zero;
+	Vector3 constantMoveDir = Vector3.zero;
+
+	public float rotationSpeed = 1f;
 
 	public void PlayerMovement() {
 		// Re-calculate the speed in case the accelerationTime value changes during runtime
 		float accelerationSpeed = (accelerationTime > 0) ? (1.0f / accelerationTime) : 1.0f; // Make sure the value is above 
 
 		// Up and down arrows cannot be held at the same time; prioritize one or the other
-		if (Input.GetKey(KeyCode.UpArrow)) {
-			if (moveVelocity.y == 0) accelerationStart = timer;
-			else if (accelerationTimeElapsed == 0 && moveVelocity.y >= 1) {
-				accelerationTimeElapsed = timer - accelerationStart;
-				print("Acceleration time: " + accelerationTimeElapsed);
-			}
-
+		if (Input.GetKey(UP)) {
+			intendedMoveDir.y = 1;
 			moveVelocity.y = Clamp(moveVelocity.y + accelerationSpeed * Time.deltaTime); // (?, 1)
-		} else if (Input.GetKey(KeyCode.DownArrow)) moveVelocity.y = Clamp(moveVelocity.y - accelerationSpeed * Time.deltaTime); // (?, -1)
-		else moveVelocity.y = Decelerate(moveVelocity.y); // (?, 0) (neither being held down)
+		} else if (Input.GetKey(DOWN)) {
+			intendedMoveDir.y = -1;
+			moveVelocity.y = Clamp(moveVelocity.y - accelerationSpeed * Time.deltaTime); // (?, -1)
+		} else {
+			intendedMoveDir.y = 0;
+			moveVelocity.y = Decelerate(moveVelocity.y); // (?, 0) (neither being held down)
+		}
 
-		if (Input.GetKey(KeyCode.LeftArrow)) moveVelocity.x = Clamp(moveVelocity.x - accelerationSpeed * Time.deltaTime); // (-1, ?)
-		else if (Input.GetKey(KeyCode.RightArrow)) moveVelocity.x = Clamp(moveVelocity.x + accelerationSpeed * Time.deltaTime); // (1, ?)
-		else moveVelocity.x = Decelerate(moveVelocity.x); // (0, ?)
+		if (Input.GetKey(LEFT)) {
+			intendedMoveDir.x = -1;
+			moveVelocity.x = Clamp(moveVelocity.x - accelerationSpeed * Time.deltaTime); // (-1, ?)
+		} else if (Input.GetKey(RIGHT)) {
+			intendedMoveDir.x = 1;
+			moveVelocity.x = Clamp(moveVelocity.x + accelerationSpeed * Time.deltaTime); // (1, ?)
+		} else {
+			intendedMoveDir.x = 0;
+			moveVelocity.x = Decelerate(moveVelocity.x); // (0, ?)
+		}
 
 		// Keep on the screen
 		Vector3 moveVector = (moveSpeed * Time.deltaTime * moveVelocity); // Where we want the position to be
 		Vector3 intendedPosOnScreen = Camera.main.WorldToViewportPoint(transform.position + moveVector); // Check if this position is within the viewport
 
+		if (!intendedMoveDir.Equals(Vector3.zero)) constantMoveDir = (moveVector.normalized * 2);
+
 		if (intendedPosOnScreen.x < 0.0 || intendedPosOnScreen.x > 1.0) moveVector.x = 0; // This position is to the left or right of the viewport; freeze X
 		if (intendedPosOnScreen.y < 0.0 || intendedPosOnScreen.y > 1.0) moveVector.y = 0; // Same but for Y. Overwrites moveVector
-
-		// Move
-		transform.position += moveVector; // Add the new filtered move vector to the position
+		
+		// Move and rotate
+		float rotationAngle = -(Mathf.Atan2(constantMoveDir.x, constantMoveDir.y) * Mathf.Rad2Deg);
+		transform.SetPositionAndRotation(transform.position + moveVector, Quaternion.Euler(0, 0, rotationAngle));
 	}
 
 	//////////////////////////////////////
@@ -110,5 +129,40 @@ public class Player : MonoBehaviour {
 			Destroy(powerup, 5); // Destruct after 5 seconds to avoid cluttering the scene
         }
     }
+
+	///////////////////////////////////////
+	////////// Week 7 Assignment //////////
+	///////////////////////////////////////
+	public float fireRate = 0.2f;
+	public float maxBulletCharge = 25f;
+	float bulletCharge;
+	bool shotCooldown = false;
+
+	Slider ammoMeter;
+
+	private void Start() { // Yes I'm putting Start all the way down here, too bad
+		bulletCharge = maxBulletCharge;
+
+		ammoMeter = GameObject.FindGameObjectWithTag("AmmoMeter").GetComponent<Slider>();
+		ammoMeter.maxValue = maxBulletCharge;
+		ammoMeter.value = bulletCharge;
+	}
+
+	void Shoot() {
+		if (shotCooldown) return;
+		if (bulletCharge <= 0) return;
+
+		shotCooldown = true;
+		StartCoroutine(DisableShotCooldown());
+
+		bulletCharge -= 1;
+		ammoMeter.value = bulletCharge;
+	}
+
+	IEnumerator DisableShotCooldown() {
+		yield return new WaitForSeconds(fireRate);
+
+		shotCooldown = false;
+	}
 }
 

@@ -10,6 +10,13 @@ public class Stars : MonoBehaviour
 	int currentStar = 0;
 	float lineLength = 0;
 
+	LineRenderer line;
+
+	private void Start() {
+		line = GetComponent<LineRenderer>();
+		line.gameObject.SetActive(true);
+	}
+
 	private void Update() {
 		DrawConstellation();
 	}
@@ -32,7 +39,9 @@ public class Stars : MonoBehaviour
 
 		lineLength += (dist / drawingTime) * Time.deltaTime;
 
-		Debug.DrawLine(star.position, star.position + (dir * lineLength), Color.white);
+		//Debug.DrawLine(star.position, star.position + (dir * lineLength), Color.white);
+		line.SetPosition(0, star.position);
+		line.SetPosition(1, star.position + (dir * lineLength));
 
 		if (lineLength >= dist) {
 			lineLength = dist;
