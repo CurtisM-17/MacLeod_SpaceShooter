@@ -32,6 +32,8 @@ public class Player : MonoBehaviour {
 
 		EnemyRadar(circleRadius, circlePoints);
 		if (Input.GetKeyDown(KeyCode.P)) SpawnPowerups(circleRadius, powerupsToSpawn);
+
+		RechargeMeter();
 	}
 
 	float Clamp(float change) {
@@ -137,8 +139,11 @@ public class Player : MonoBehaviour {
 	public float maxBulletCharge = 25f;
 	float bulletCharge;
 	bool shotCooldown = false;
-
+	public GameObject bulletPrefab;
+	Transform[] shotPoints = new Transform[2];
+	int lastBulletShotPoint = 0; // 0 or 1
 	Slider ammoMeter;
+	public float meterRechargeSpeed = 0.1f;
 
 	private void Start() { // Yes I'm putting Start all the way down here, too bad
 		bulletCharge = maxBulletCharge;
@@ -146,6 +151,9 @@ public class Player : MonoBehaviour {
 		ammoMeter = GameObject.FindGameObjectWithTag("AmmoMeter").GetComponent<Slider>();
 		ammoMeter.maxValue = maxBulletCharge;
 		ammoMeter.value = bulletCharge;
+
+		shotPoints[0] = transform.Find("BulletPoint1");
+		shotPoints[1] = transform.Find("BulletPoint2");
 	}
 
 	void Shoot() {
@@ -156,6 +164,19 @@ public class Player : MonoBehaviour {
 		StartCoroutine(DisableShotCooldown());
 
 		bulletCharge -= 1;
+		ammoMeter.value = bulletCharge;
+
+		Transform shotPoint = shotPoints[lastBulletShotPoint];
+		Instantiate(bulletPrefab, shotPoint.position, shotPoint.rotation);
+
+		lastBulletShotPoint = (lastBulletShotPoint + 1) % 2;
+	}
+
+	void RechargeMeter() {
+		if (shotCooldown) return;
+		if (bulletCharge >= maxBulletCharge) return;
+
+		bulletCharge = Mathf.Clamp(bulletCharge + meterRechargeSpeed * Time.deltaTime, 0, maxBulletCharge);
 		ammoMeter.value = bulletCharge;
 	}
 
