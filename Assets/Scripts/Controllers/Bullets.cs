@@ -6,6 +6,7 @@ public class Bullets : MonoBehaviour
 {
 	Rigidbody2D rb;
 	public float speed = 1.0f;
+	public float damage = 10f;
 	public bool damagesPlayer = false;
 
 	private void Start() {
@@ -20,11 +21,19 @@ public class Bullets : MonoBehaviour
 
 	private void OnTriggerEnter2D(Collider2D collision) {
 		if (damagesPlayer && collision.gameObject.CompareTag("Player")) Damage(true);
-		else if (!damagesPlayer && collision.gameObject.CompareTag("Enemy")) Damage(false);
+		else if (!damagesPlayer && collision.gameObject.CompareTag("Enemy")) DamageEnemy(collision.gameObject);
+		else if (!damagesPlayer && collision.gameObject.CompareTag("Mech")) Damage(false);
 	}
 
 	void Damage(bool isPlayer) {
-		print(isPlayer);
+		if (isPlayer) Player.IncrementHealth(-damage);
+		else if (!isPlayer) Mech.IncrementHealth(-damage);
+
+		Destroy(gameObject);
+	}
+
+	void DamageEnemy(GameObject enemy) {
+		enemy.GetComponent<Enemy>().Damage(damage);
 		Destroy(gameObject);
 	}
 }

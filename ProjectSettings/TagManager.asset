@@ -8,6 +8,8 @@ TagManager:
   - HealthMeter
   - Enemy
   - Bullet
+  - EnemyHealthMeter
+  - Mech
   layers:
   - Default
   - TransparentFX

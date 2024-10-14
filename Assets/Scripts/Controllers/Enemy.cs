@@ -3,16 +3,23 @@ using System.Collections;
 
 public class Enemy : MonoBehaviour
 {
-	public Transform plrTransform;
+	Transform plrTransform;
 	public float detectionRange = 4f;
 	public float minWanderRange, maxWanderRange;
 	public float moveSpeed = 1.5f;
+	float timer;
+
+	bool currentlyChasing = false;
 
 	private void Start() {
+		plrTransform = GameObject.FindGameObjectWithTag("Player").transform;
+
 		StartCoroutine(StopAndWait());
+		health = maxHealth;
 	}
 
 	private void Update() {
+		timer += Time.deltaTime;
 		EnemyMovement();
 	}
 
@@ -42,6 +49,8 @@ public class Enemy : MonoBehaviour
 	void Wander() {
 		if (stoppingAndWaiting) return;
 
+		currentlyChasing = false;
+
 		float distFromGoal = MoveTo(currentRandomSpot);
 		if (distFromGoal <= 0.1f) StartCoroutine(StopAndWait());
 	}
@@ -70,6 +79,62 @@ public class Enemy : MonoBehaviour
 
 	/// Chase player
 	void ChasePlayer() {
+		if (currentlyChasing == false) {
+			lastShotTime = timer + 1; // Transitional period, don't shoot instantly
+			NewShotRate();
+		}
+		currentlyChasing = true;
+
 		MoveTo(plrTransform.position);
+		Shooting();
+	}
+
+	// Collisions
+	public float collisionDamage = 35;
+	public GameObject explosionPrefab;
+
+	private void OnTriggerEnter2D(Collider2D collision) {
+		if (!collision.gameObject.CompareTag("Player")) return;
+
+		Player.IncrementHealth(-collisionDamage);
+		Die();
+	}
+
+	// Shooting
+	public GameObject bulletPrefab;
+	public float minShotRate, maxShotRate;
+	float currentShotRate, lastShotTime;
+
+	void NewShotRate() {
+		currentShotRate = Random.Range(minShotRate, maxShotRate);
+	}
+
+	void Shooting() {
+		if (timer - lastShotTime < currentShotRate) return;
+
+		print(timer + " | " + lastShotTime + " | " + currentShotRate);
+
+		Instantiate(bulletPrefab, transform.position, transform.rotation);
+
+		lastShotTime = timer;
+		NewShotRate();
+	}
+
+	public float maxHealth = 10f;
+	float health;
+
+	public void Damage(float damage) {
+		health = Mathf.Clamp(health - damage, 0, maxHealth);
+
+		print(health);
+
+		if (health == 0) Die();
+	}
+
+	void Die() {
+		Destroy(gameObject);
+
+		GameObject explosion = Instantiate(explosionPrefab, transform.position, explosionPrefab.transform.rotation);
+		Destroy(explosion, 1.9f);
 	}
 }

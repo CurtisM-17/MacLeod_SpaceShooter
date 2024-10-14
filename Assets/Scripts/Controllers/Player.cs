@@ -5,10 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public class Player : MonoBehaviour {
+	Rigidbody2D rb;
 	public List<Transform> asteroidTransforms;
-	public Transform enemyTransform;
-	public GameObject bombPrefab;
-	public Transform bombsTransform;
 	public GameObject powerupPrefab;
 
 	// Controls
@@ -30,9 +28,6 @@ public class Player : MonoBehaviour {
 
 		if (Input.GetMouseButton(0)) Shoot();
 
-		EnemyRadar(circleRadius, circlePoints);
-		if (Input.GetKeyDown(KeyCode.P)) SpawnPowerups(circleRadius, powerupsToSpawn);
-
 		RechargeMeter();
 	}
 
@@ -53,9 +48,9 @@ public class Player : MonoBehaviour {
 
 	Vector3 intendedMoveDir = Vector3.zero;
 	Vector3 constantMoveDir = Vector3.zero;
+	Vector3 moveVector;
 
 	public float rotationSpeed = 1f;
-
 	public void PlayerMovement() {
 		// Re-calculate the speed in case the accelerationTime value changes during runtime
 		float accelerationSpeed = (accelerationTime > 0) ? (1.0f / accelerationTime) : 1.0f; // Make sure the value is above 
@@ -82,19 +77,23 @@ public class Player : MonoBehaviour {
 			intendedMoveDir.x = 0;
 			moveVelocity.x = Decelerate(moveVelocity.x); // (0, ?)
 		}
+		
+	}
 
-		// Keep on the screen
-		Vector3 moveVector = (moveSpeed * Time.deltaTime * moveVelocity); // Where we want the position to be
+	private void FixedUpdate() {
+		moveVector = (moveSpeed * Time.fixedDeltaTime * moveVelocity); // Where we want the position to be
 		Vector3 intendedPosOnScreen = Camera.main.WorldToViewportPoint(transform.position + moveVector); // Check if this position is within the viewport
 
 		if (!intendedMoveDir.Equals(Vector3.zero)) constantMoveDir = (moveVector.normalized * 2);
 
+		// Keep on the screen
 		if (intendedPosOnScreen.x < 0.0 || intendedPosOnScreen.x > 1.0) moveVector.x = 0; // This position is to the left or right of the viewport; freeze X
 		if (intendedPosOnScreen.y < 0.0 || intendedPosOnScreen.y > 1.0) moveVector.y = 0; // Same but for Y. Overwrites moveVector
-		
-		// Move and rotate
+
 		float rotationAngle = -(Mathf.Atan2(constantMoveDir.x, constantMoveDir.y) * Mathf.Rad2Deg);
-		transform.SetPositionAndRotation(transform.position + moveVector, Quaternion.Euler(0, 0, rotationAngle));
+
+		rb.rotation = rotationAngle;
+		rb.position = rb.transform.position + moveVector;
 	}
 
 	//////////////////////////////////////
@@ -107,20 +106,6 @@ public class Player : MonoBehaviour {
 
 		return thisPoint; // Coordinate of the point on the circle relative to the circle's origin
 	}
-	
-	public void EnemyRadar(float radius, int circlePoints) {
-        float spaceBetweenPoints = 360.0f / circlePoints; // Divide 360 degrees into the number of points
-
-		Color circleColor = ((enemyTransform.position - transform.position).magnitude <= radius) ? Color.red : Color.green; // Red if within radius, green if outside
-		
-		for (int point = 0; point < circlePoints; point++){ // Each circle point
-			Vector3 thisPoint = GetPoint(point, spaceBetweenPoints, radius); // This point on the circle
-			Vector3 nextPoint = GetPoint((point + 1) % (circlePoints + 1), spaceBetweenPoints, radius); // The adjacent/next point (loop back at 0 if last element)
-
-			// Start line at thisPoint and draw until nextPoint (around the player's position of course)
-			Debug.DrawLine(thisPoint, nextPoint, circleColor);
-		}
-    }
 
 	public void SpawnPowerups(float radius, int numOfPowerups) {
 		float spaceBetweenPowerups = 360.0f / numOfPowerups; // Divide 360 degrees into the number of powerups
@@ -139,18 +124,30 @@ public class Player : MonoBehaviour {
 	public float maxBulletCharge = 25f;
 	float bulletCharge;
 	bool shotCooldown = false;
+	bool rechargeCooldown = false; // Longer recharge if charge hits 0
 	public GameObject bulletPrefab;
-	Transform[] shotPoints = new Transform[2];
+	readonly Transform[] shotPoints = new Transform[2];
 	int lastBulletShotPoint = 0; // 0 or 1
 	Slider ammoMeter;
+	static Slider healthMeter;
+	Image ammoMeterFill;
 	public float meterRechargeSpeed = 0.1f;
+	public static float maxHealth = 100;
+	static float health;
 
 	private void Start() { // Yes I'm putting Start all the way down here, too bad
+		rb = GetComponent<Rigidbody2D>();
 		bulletCharge = maxBulletCharge;
+
+		health = maxHealth;
+		healthMeter = GameObject.FindGameObjectWithTag("HealthMeter").GetComponent<Slider>();
+		healthMeter.maxValue = maxHealth;
+		healthMeter.value = health;
 
 		ammoMeter = GameObject.FindGameObjectWithTag("AmmoMeter").GetComponent<Slider>();
 		ammoMeter.maxValue = maxBulletCharge;
 		ammoMeter.value = bulletCharge;
+		ammoMeterFill = ammoMeter.fillRect.GetComponent<Image>();
 
 		shotPoints[0] = transform.Find("BulletPoint1");
 		shotPoints[1] = transform.Find("BulletPoint2");
@@ -158,13 +155,19 @@ public class Player : MonoBehaviour {
 
 	void Shoot() {
 		if (shotCooldown) return;
-		if (bulletCharge <= 0) return;
+		if (rechargeCooldown) return;
+		if (bulletCharge < 1) return;
 
 		shotCooldown = true;
 		StartCoroutine(DisableShotCooldown());
 
 		bulletCharge -= 1;
 		ammoMeter.value = bulletCharge;
+		
+		if (bulletCharge < 1) {
+			rechargeCooldown = true;
+			StartCoroutine(DisableRechargeCooldown());
+		}
 
 		Transform shotPoint = shotPoints[lastBulletShotPoint];
 		Instantiate(bulletPrefab, shotPoint.position, shotPoint.rotation);
@@ -184,6 +187,20 @@ public class Player : MonoBehaviour {
 		yield return new WaitForSeconds(fireRate);
 
 		shotCooldown = false;
+	}
+
+	IEnumerator DisableRechargeCooldown() {
+		ammoMeterFill.color = new Color(130f/255, 0, 0);
+
+		yield return new WaitForSeconds(4);
+
+		rechargeCooldown = false;
+		ammoMeterFill.color = new Color(88f/255, 105f/255, 1);
+	}
+
+	public static void IncrementHealth(float increment) {
+		health = Mathf.Clamp(health + increment, 0, maxHealth);
+		healthMeter.value = health;
 	}
 }
 
