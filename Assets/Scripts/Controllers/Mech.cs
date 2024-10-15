@@ -124,7 +124,7 @@ public class Mech : MonoBehaviour
 	public GameObject armProjectilePrefab;
 
 	void ThrowArmAttack_Start() {
-		PointAt(transform.position + new Vector3(-3, 6), "ThrowArm_1");
+		PointAt(transform.position + new Vector3(-3*100, 6*100), "ThrowArm_1");
 	}
 
 	IEnumerator ThrowArmAttack_Throw() {

@@ -28,6 +28,11 @@ public class ArmProjectile : MonoBehaviour
 	private void Update() {
 		timer += Time.deltaTime;
 
+		if (mech == null) {
+			Destroy(gameObject);
+			return;
+		}
+
 		if (!isReturning && timer >= recallTime) isReturning = true;
 
 		if (isReturning) {
