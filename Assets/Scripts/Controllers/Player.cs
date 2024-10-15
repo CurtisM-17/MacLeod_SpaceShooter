@@ -77,7 +77,6 @@ public class Player : MonoBehaviour {
 			intendedMoveDir.x = 0;
 			moveVelocity.x = Decelerate(moveVelocity.x); // (0, ?)
 		}
-		
 	}
 
 	private void FixedUpdate() {
@@ -87,7 +86,7 @@ public class Player : MonoBehaviour {
 		if (!intendedMoveDir.Equals(Vector3.zero)) constantMoveDir = (moveVector.normalized * 2);
 
 		// Keep on the screen
-		if (intendedPosOnScreen.x < 0.0 || intendedPosOnScreen.x > 1.0) moveVector.x = 0; // This position is to the left or right of the viewport; freeze X
+		if (intendedPosOnScreen.x < 0.3 || intendedPosOnScreen.x > 1.0) moveVector.x = 0; // This position is to the left or right of the viewport; freeze X
 		if (intendedPosOnScreen.y < 0.0 || intendedPosOnScreen.y > 1.0) moveVector.y = 0; // Same but for Y. Overwrites moveVector
 
 		float rotationAngle = -(Mathf.Atan2(constantMoveDir.x, constantMoveDir.y) * Mathf.Rad2Deg);

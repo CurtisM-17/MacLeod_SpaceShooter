@@ -112,8 +112,6 @@ public class Enemy : MonoBehaviour
 	void Shooting() {
 		if (timer - lastShotTime < currentShotRate) return;
 
-		print(timer + " | " + lastShotTime + " | " + currentShotRate);
-
 		Instantiate(bulletPrefab, transform.position, transform.rotation);
 
 		lastShotTime = timer;
@@ -126,8 +124,6 @@ public class Enemy : MonoBehaviour
 	public void Damage(float damage) {
 		health = Mathf.Clamp(health - damage, 0, maxHealth);
 
-		print(health);
-
 		if (health == 0) Die();
 	}
 
@@ -135,6 +131,6 @@ public class Enemy : MonoBehaviour
 		Destroy(gameObject);
 
 		GameObject explosion = Instantiate(explosionPrefab, transform.position, explosionPrefab.transform.rotation);
-		Destroy(explosion, 1.9f);
+		Destroy(explosion, 1.7f);
 	}
 }

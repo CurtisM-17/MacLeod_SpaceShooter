@@ -38,13 +38,7 @@ public class Mech : MonoBehaviour
 	private void FixedUpdate() {
 		if (health <= 0) return;
 
-		if (currentlyPointing) PointAt(currentArmPointAt);
-	}
-
-	private void OnTriggerStay2D(Collider2D collision) {
-		if (!collision.gameObject.CompareTag("Player")) return;
-
-		collision.gameObject.SendMessage("IncrementHealth", -15f * Time.deltaTime);
+		if (currentlyPointing) PointAt(currentArmPointAt, "");
 	}
 
 	public static void IncrementHealth(float increment) {
@@ -58,23 +52,29 @@ public class Mech : MonoBehaviour
 	}
 
 	/// Move arm (point at)
-	void PointAt(Vector3 position) {
+	void PointAt(Vector3 position, string context) {
+		if (!context.Equals("")) pointContext = context;
+
 		currentlyPointing = true;
 		currentArmPointAt = position;
 
 		Vector3 diff = (position - armRb.transform.position);
 
 		float rotationAngle = -(Mathf.Atan2(diff.x, diff.y) * Mathf.Rad2Deg) - 180;
-		//armRb.rotation = rotationAngle;
 
-		float progress = rotationAngle - armRb.rotation;
-		if (Mathf.Abs(progress) % 360 <= 5f) {
+		float progress = (rotationAngle - armRb.rotation) % 360;
+		if (Mathf.Abs(progress) <= moveArmSpeed * Time.deltaTime) {
 			currentlyPointing = false;
-			FinishedPointing();
+			armRb.rotation = rotationAngle % 360;
+			FinishedPointing(pointContext);
+			pointContext = "";
 			return;
 		}
 
-		armRb.rotation += ((progress < 0) ? moveArmSpeed : -moveArmSpeed) * Time.deltaTime;
+		// Add speed if direction is negative, subtract if positive. Positive if throw arm 1 state
+		else armRb.rotation += (
+			(progress+180 < 0 || pointContext.Equals("ThrowArm_1"))
+			? moveArmSpeed : -moveArmSpeed) * Time.deltaTime;
 	}
 
 	/// Attacks
@@ -90,28 +90,57 @@ public class Mech : MonoBehaviour
 		yield return new WaitForSeconds(currentAttackTime);
 
 		//if (Random.Range(1, 3) == 1) DeployShipAttack(); else ThrowArmAttack(); // 50/50 chance for either attack
-		DeployShipAttack_Start();
+		//DeployShipAttack_Start();
+		ThrowArmAttack_Start();
 
 		NewAttackTime();
-		//StartCoroutine(Attack());
 	}
 
-	void DeployShipAttack_Start() {
-		pointContext = "Deploy Ship";
-		PointAt(playerTransform.position);
+	/// DEPLOY SHIP ATTACK
+	void DeployShipAttack_Start() { // Start
+		PointAt(playerTransform.position, "Deploy Ship");
 	}
 
-	void DeployShipAttack_Deploy() {
+	void DeployShipAttack_Deploy() { // Deploy a ship
 		Instantiate(enemyPrefab, enemySpawnpoint.position, enemyPrefab.transform.rotation);
+
+		StartCoroutine(DeployShipAttack_End());
 	}
 
-	void ThrowArmAttack() {
-		print("Throw arm");
+	IEnumerator DeployShipAttack_End() { // End the attack
+		yield return new WaitForSeconds(2);
+
+		PointAt(transform.position - (transform.up * 10), "Return to Side"); // Return arm to the side
 	}
 
-	void FinishedPointing() {
-		if (pointContext == "Deploy Ship") {
-			DeployShipAttack_Deploy();
-		}
+	/// THROW ARM ATTACK
+	public GameObject armProjectilePrefab;
+
+	void ThrowArmAttack_Start() {
+		PointAt(transform.position + new Vector3(-3, 6), "ThrowArm_1");
+	}
+
+	IEnumerator ThrowArmAttack_Throw() {
+		yield return new WaitForSeconds(1);
+
+		arm.SetActive(false);
+		Instantiate(armProjectilePrefab, arm.transform.position, arm.transform.rotation);
+	}
+
+	public void ArmReturned() {
+		Vector3 pointAtPlr = (playerTransform.position - armRb.transform.position);
+		float rotationAngle = -(Mathf.Atan2(pointAtPlr.x, pointAtPlr.y) * Mathf.Rad2Deg) - 180;
+		armRb.rotation = rotationAngle % 360;
+
+		arm.SetActive(true);
+
+		//PointAt(transform.position - (transform.up * 10), "Return to Side"); // Return arm to the side
+	}
+
+	/// Point end events
+	void FinishedPointing(string context) {
+		if (context == "Deploy Ship") DeployShipAttack_Deploy();
+		else if (context == "Return to Side") StartCoroutine(Attack()); // Next attack
+		else if (context == "ThrowArm_1") StartCoroutine(ThrowArmAttack_Throw());
 	}
 }

@@ -2628,6 +2628,7 @@ MonoBehaviour:
   moveArmSpeed: 60
   minAttackTime: 2
   maxAttackTime: 5
+  armProjectilePrefab: {fileID: 2158998814691734515, guid: f4f706e1f17b1441ca2af4bc2489a799, type: 3}
 --- !u!61 &1206860770
 BoxCollider2D:
   m_ObjectHideFlags: 0
