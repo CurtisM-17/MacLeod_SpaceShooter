@@ -33,6 +33,15 @@ public class Mech : MonoBehaviour
 		//NewAttackTime();
 		currentAttackTime = 3;
 		StartCoroutine(Attack());
+
+		NewMoveInterval();
+		StartCoroutine(MoveAfterDelay());
+
+		targetYPosition = transform.position.y;
+	}
+
+	private void Update() {
+		Move();
 	}
 
 	private void FixedUpdate() {
@@ -72,9 +81,7 @@ public class Mech : MonoBehaviour
 		}
 
 		// Add speed if direction is negative, subtract if positive. Positive if throw arm 1 state
-		else armRb.rotation += (
-			(progress+180 < 0 || pointContext.Equals("ThrowArm_1"))
-			? moveArmSpeed : -moveArmSpeed) * Time.deltaTime;
+		else armRb.rotation += ((progress+180 < 0 || pointContext.Equals("ThrowArm_1")) ? moveArmSpeed : -moveArmSpeed) * Time.deltaTime;
 	}
 
 	/// Attacks
@@ -89,9 +96,9 @@ public class Mech : MonoBehaviour
 	IEnumerator Attack() {
 		yield return new WaitForSeconds(currentAttackTime);
 
-		//if (Random.Range(1, 3) == 1) DeployShipAttack(); else ThrowArmAttack(); // 50/50 chance for either attack
+		if (Random.Range(1, 3) == 1) DeployShipAttack_Start(); else ThrowArmAttack_Start(); // 50/50 chance for either attack
 		//DeployShipAttack_Start();
-		ThrowArmAttack_Start();
+		//ThrowArmAttack_Start();
 
 		NewAttackTime();
 	}
@@ -130,11 +137,11 @@ public class Mech : MonoBehaviour
 	public void ArmReturned() {
 		Vector3 pointAtPlr = (playerTransform.position - armRb.transform.position);
 		float rotationAngle = -(Mathf.Atan2(pointAtPlr.x, pointAtPlr.y) * Mathf.Rad2Deg) - 180;
+		
+		arm.SetActive(true);
 		armRb.rotation = rotationAngle % 360;
 
-		arm.SetActive(true);
-
-		//PointAt(transform.position - (transform.up * 10), "Return to Side"); // Return arm to the side
+		PointAt(transform.position - (transform.up * 10), "Return to Side"); // Return arm to the side
 	}
 
 	/// Point end events
@@ -142,5 +149,51 @@ public class Mech : MonoBehaviour
 		if (context == "Deploy Ship") DeployShipAttack_Deploy();
 		else if (context == "Return to Side") StartCoroutine(Attack()); // Next attack
 		else if (context == "ThrowArm_1") StartCoroutine(ThrowArmAttack_Throw());
+	}
+
+	/// Moving up and down the screen
+	public float minMoveInterval, maxMoveInterval;
+	float currentMoveInterval;
+	float targetYPosition;
+	public float moveSpeed = 5f;
+	bool frozen = false;
+
+	void NewMoveInterval() {
+		currentMoveInterval = Random.Range(minMoveInterval, maxMoveInterval);
+	}
+
+	void MoveToNewYPos() {
+		float yPos = Random.Range(0.0f, 6.0f);
+		yPos = Random.Range(1, 3) == 2 ? yPos : -yPos;
+
+		if (Mathf.Abs(transform.position.y - yPos) <= 1) {
+			// Make sure movement isn't too small
+			MoveToNewYPos();
+			return;
+		}
+
+		targetYPosition = yPos;
+		frozen = false;
+	}
+
+	IEnumerator MoveAfterDelay() {
+		yield return new WaitForSeconds(currentMoveInterval);
+
+		MoveToNewYPos();
+	}
+
+	void Move() {
+		if (frozen) return;
+
+		float direction = targetYPosition - transform.position.y;
+
+		float movementScale = moveSpeed * Time.deltaTime;
+		transform.position += movementScale * new Vector3(0, (direction < 0) ? -1 : 1);
+
+		if (Mathf.Abs(direction) <= movementScale * 1.5f) {
+			frozen = true;
+			NewMoveInterval();
+			StartCoroutine(MoveAfterDelay());
+		}
 	}
 }

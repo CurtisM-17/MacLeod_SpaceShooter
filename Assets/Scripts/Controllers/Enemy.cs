@@ -122,6 +122,8 @@ public class Enemy : MonoBehaviour
 	float health;
 
 	public void Damage(float damage) {
+		if (timer < 1) return; // Invincible for 1 second
+
 		health = Mathf.Clamp(health - damage, 0, maxHealth);
 
 		if (health == 0) Die();

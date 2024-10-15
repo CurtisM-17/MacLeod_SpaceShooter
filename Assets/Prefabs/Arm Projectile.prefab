@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 3538479510936145753}
   m_Layer: 0
   m_Name: Arm Projectile
-  m_TagString: Enemy
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -49,8 +49,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 14
   rotationSpeed: 1000
-  damage: 15
-  recallTime: 5
+  damage: 30
+  recallTime: 3
 --- !u!50 &4854722405431115005
 Rigidbody2D:
   serializedVersion: 4
@@ -121,7 +121,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 1.5986376, y: 4.1716146}
+  m_Size: {x: 4.17, y: 4.1716146}
   m_EdgeRadius: 0
 --- !u!1 &3331837836598325234
 GameObject:

@@ -2629,6 +2629,9 @@ MonoBehaviour:
   minAttackTime: 2
   maxAttackTime: 5
   armProjectilePrefab: {fileID: 2158998814691734515, guid: f4f706e1f17b1441ca2af4bc2489a799, type: 3}
+  minMoveInterval: 3
+  maxMoveInterval: 6
+  moveSpeed: 1
 --- !u!61 &1206860770
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -4973,7 +4976,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6890330259706833056, guid: abc125f00ae369940b2c5c0275186637, type: 3}
       propertyPath: maxBulletCharge
-      value: 15
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 6890330259706833056, guid: abc125f00ae369940b2c5c0275186637, type: 3}
       propertyPath: meterRechargeSpeed

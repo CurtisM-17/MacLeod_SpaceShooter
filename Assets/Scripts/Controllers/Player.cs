@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class Player : MonoBehaviour {
 	Rigidbody2D rb;
@@ -200,6 +201,8 @@ public class Player : MonoBehaviour {
 	public static void IncrementHealth(float increment) {
 		health = Mathf.Clamp(health + increment, 0, maxHealth);
 		healthMeter.value = health;
+
+		if (health == 0) SceneManager.LoadScene(1);
 	}
 }
 
